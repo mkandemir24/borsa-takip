@@ -1,0 +1,31 @@
+name: Borsa Robotu Calistir
+
+on:
+  schedule:
+    - cron: '*/15 * * * *' # Her 15 dakikada bir çalışır
+  workflow_dispatch: # İstediğinde elle başlatman için buton ekler
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Depoyu Kopyala
+        uses: actions/checkout@v3
+
+      - name: Python Kur
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Kütüphaneleri Yükle
+        run: |
+          pip install -r requirements.txt
+
+      - name: Firebase Anahtarını Oluştur
+        run: |
+          cat <<EOF > serviceAccountKey.json
+          ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          EOF
+
+      - name: Robotu Calistir
+        run: python main.py
