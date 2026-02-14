@@ -1,1 +1,113 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Borsa Takip</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #f2f2f7; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 420px; }
+        .card { background: #fff; border-radius: 18px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        h2 { text-align: center; margin: 0 0 20px 0; color: #1c1c1e; }
+        .input-group { position: relative; display: flex; gap: 10px; margin-bottom: 20px; }
+        input { flex: 1; padding: 12px; border: 1px solid #e5e5ea; border-radius: 12px; font-size: 16px; outline: none; background: #f9f9f9; }
+        button { background: #007aff; color: white; border: none; padding: 0 20px; border-radius: 12px; font-weight: 600; cursor: pointer; }
+        .hisse-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #f2f2f7; }
+        .symbol { font-weight: 700; font-size: 17px; }
+        .price-col { text-align: right; }
+        .price { font-weight: 600; font-size: 17px; }
+        .change { font-size: 13px; font-weight: 500; padding: 4px 8px; border-radius: 6px; display: inline-block; margin-top: 4px; }
+        .drag-handle { color: #c7c7cc; cursor: grab; padding-right: 12px; font-size: 20px; }
+        .delete-btn { color: #ff3b30; font-size: 11px; margin-left: 10px; cursor: pointer; text-decoration: underline; }
+        .up { background: #e4fbf0; color: #34c759; }
+        .down { background: #ffebeb; color: #ff3b30; }
+        .neutral { background: #f2f2f7; color: #8e8e93; }
+    </style>
+</head>
+<body>
 
+<div class="container">
+    <div class="card">
+        <h2>BİST Avcısı 🏹</h2>
+        <div class="input-group">
+            <input type="text" id="symbolInput" placeholder="Hisse Kodu (Örn: THYAO)" autocomplete="off">
+            <button onclick="ekle()">Ekle</button>
+        </div>
+        <div id="liste"></div>
+    </div>
+</div>
+
+<script>
+    // Config Bilgilerini Senin Projene Göre Güncelledim
+    const firebaseConfig = {
+        apiKey: "AIzaSyCF61G05Qbffz-n92Qumf43LP3TfcMZXio",
+        authDomain: "bistavcisi.firebaseapp.com",
+        projectId: "bistavcisi",
+        storageBucket: "bistavcisi.firebasestorage.app",
+        messagingSenderId: "659145246450",
+        appId: "1:659145246450:web:ab5a3d77bc8f0b0b14b26b"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    async function ekle() {
+        let kod = document.getElementById('symbolInput').value.toUpperCase().trim();
+        if (!kod) return;
+        if (!kod.endsWith('.IS') && !kod.includes('=')) kod += '.IS';
+
+        const snapshot = await db.collection("hisseler").get();
+        await db.collection("hisseler").add({
+            kod: kod,
+            sira: snapshot.size + 1,
+            fiyat: 0,
+            degisim: 0
+        });
+        document.getElementById('symbolInput').value = '';
+    }
+
+    db.collection("hisseler").orderBy("sira").onSnapshot(snap => {
+        const listDiv = document.getElementById('liste');
+        listDiv.innerHTML = "";
+        snap.forEach(doc => {
+            const data = doc.data();
+            let renkSinifi = data.degisim > 0 ? "up" : (data.degisim < 0 ? "down" : "neutral");
+            let fiyatGoster = data.fiyat > 0 ? data.fiyat.toFixed(2) + " ₺" : "Güncelleniyor...";
+
+            listDiv.innerHTML += `
+                <div class="hisse-item" data-id="${doc.id}">
+                    <div style="display:flex; align-items:center;">
+                        <span class="drag-handle">≡</span>
+                        <div>
+                            <div class="symbol">${data.kod.replace('.IS', '')}</div>
+                            <span class="delete-btn" onclick="sil('${doc.id}')">Sil</span>
+                        </div>
+                    </div>
+                    <div class="price-col">
+                        <div class="price">${fiyatGoster}</div>
+                        <div class="change ${renkSinifi}">%${data.degisim.toFixed(2)}</div>
+                    </div>
+                </div>`;
+        });
+    });
+
+    function sil(id) {
+        if(confirm('Silinsin mi?')) db.collection("hisseler").doc(id).delete();
+    }
+
+    new Sortable(document.getElementById('liste'), {
+        handle: '.drag-handle',
+        animation: 150,
+        onEnd: function () {
+            const items = document.querySelectorAll('.hisse-item');
+            items.forEach((item, index) => {
+                db.collection("hisseler").doc(item.dataset.id).update({ sira: index + 1 });
+            });
+        }
+    });
+</script>
+</body>
+</html>
