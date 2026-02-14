@@ -2,7 +2,7 @@ name: Borsa Robotu Calistir
 
 on:
   schedule:
-    - cron: '*/15 * * * *' # Her 15 dakikada bir çalışır
+    - cron: '*/5 * * * *' # Her 15 dakikada bir çalışır
   workflow_dispatch: # İstediğinde elle başlatman için buton ekler
 
 jobs:
