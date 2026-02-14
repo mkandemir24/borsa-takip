@@ -11,17 +11,32 @@
         body { font-family: -apple-system, sans-serif; background: #f2f2f7; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .container { width: 100%; max-width: 420px; }
         .card { background: #fff; border-radius: 18px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        h2 { text-align: center; margin: 0 0 20px 0; color: #1c1c1e; }
+        
+        /* Tıklanabilir Başlık Ayarı */
+        h2 { 
+            text-align: center; 
+            margin: 0 0 20px 0; 
+            color: #1c1c1e; 
+            cursor: pointer; 
+            user-select: none; 
+            transition: opacity 0.2s;
+        }
+        h2:active { opacity: 0.5; }
+        
         .input-group { position: relative; display: flex; gap: 10px; margin-bottom: 20px; }
         input { flex: 1; padding: 12px; border: 1px solid #e5e5ea; border-radius: 12px; font-size: 16px; outline: none; background: #f9f9f9; }
         button { background: #007aff; color: white; border: none; padding: 0 20px; border-radius: 12px; font-weight: 600; cursor: pointer; }
+        
         .hisse-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #f2f2f7; }
+        .hisse-item:last-child { border-bottom: none; }
         .symbol { font-weight: 700; font-size: 17px; }
         .price-col { text-align: right; }
         .price { font-weight: 600; font-size: 17px; }
         .change { font-size: 13px; font-weight: 500; padding: 4px 8px; border-radius: 6px; display: inline-block; margin-top: 4px; }
+        
         .drag-handle { color: #c7c7cc; cursor: grab; padding-right: 12px; font-size: 20px; }
         .delete-btn { color: #ff3b30; font-size: 11px; margin-left: 10px; cursor: pointer; text-decoration: underline; }
+
         .up { background: #e4fbf0; color: #34c759; }
         .down { background: #ffebeb; color: #ff3b30; }
         .neutral { background: #f2f2f7; color: #8e8e93; }
@@ -31,7 +46,8 @@
 
 <div class="container">
     <div class="card">
-        <h2>BİST Avcısı 🏹</h2>
+        <h2 onclick="location.reload()" title="Yenilemek için tıkla">BİST Avcısı 🏹</h2>
+        
         <div class="input-group">
             <input type="text" id="symbolInput" placeholder="Hisse Kodu (Örn: THYAO)" autocomplete="off">
             <button onclick="ekle()">Ekle</button>
@@ -41,7 +57,7 @@
 </div>
 
 <script>
-    // Config Bilgilerini Senin Projene Göre Güncelledim
+    // Firebase Yapılandırman
     const firebaseConfig = {
         apiKey: "AIzaSyCF61G05Qbffz-n92Qumf43LP3TfcMZXio",
         authDomain: "bistavcisi.firebaseapp.com",
@@ -54,10 +70,15 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
+    // Hisse Ekleme Fonksiyonu
     async function ekle() {
         let kod = document.getElementById('symbolInput').value.toUpperCase().trim();
         if (!kod) return;
-        if (!kod.endsWith('.IS') && !kod.includes('=')) kod += '.IS';
+        
+        // Borsa İstanbul eki otomatik eklenir
+        if (!kod.endsWith('.IS') && !kod.includes('=') && !kod.includes('TRY')) {
+             kod += '.IS';
+        }
 
         const snapshot = await db.collection("hisseler").get();
         await db.collection("hisseler").add({
@@ -69,35 +90,47 @@
         document.getElementById('symbolInput').value = '';
     }
 
+    // Listeyi Canlı Getirme
     db.collection("hisseler").orderBy("sira").onSnapshot(snap => {
         const listDiv = document.getElementById('liste');
         listDiv.innerHTML = "";
+        
         snap.forEach(doc => {
             const data = doc.data();
-            let renkSinifi = data.degisim > 0 ? "up" : (data.degisim < 0 ? "down" : "neutral");
+            const id = doc.id;
+            
+            let renkSinifi = "neutral";
+            if (data.degisim > 0) renkSinifi = "up";
+            else if (data.degisim < 0) renkSinifi = "down";
+
             let fiyatGoster = data.fiyat > 0 ? data.fiyat.toFixed(2) + " ₺" : "Güncelleniyor...";
 
             listDiv.innerHTML += `
-                <div class="hisse-item" data-id="${doc.id}">
+                <div class="hisse-item" data-id="${id}">
                     <div style="display:flex; align-items:center;">
                         <span class="drag-handle">≡</span>
                         <div>
                             <div class="symbol">${data.kod.replace('.IS', '')}</div>
-                            <span class="delete-btn" onclick="sil('${doc.id}')">Sil</span>
+                            <span class="delete-btn" onclick="sil('${id}')">Sil</span>
                         </div>
                     </div>
                     <div class="price-col">
                         <div class="price">${fiyatGoster}</div>
-                        <div class="change ${renkSinifi}">%${data.degisim.toFixed(2)}</div>
+                        <div class="change ${renkSinifi}">%${data.degisim ? data.degisim.toFixed(2) : "0.00"}</div>
                     </div>
-                </div>`;
+                </div>
+            `;
         });
     });
 
+    // Silme Fonksiyonu
     function sil(id) {
-        if(confirm('Silinsin mi?')) db.collection("hisseler").doc(id).delete();
+        if(confirm('Bu hisseyi listeden çıkarmak istiyor musun?')) {
+            db.collection("hisseler").doc(id).delete();
+        }
     }
 
+    // Sürükle Bırak Sıralama
     new Sortable(document.getElementById('liste'), {
         handle: '.drag-handle',
         animation: 150,
@@ -109,5 +142,6 @@
         }
     });
 </script>
+
 </body>
 </html>
