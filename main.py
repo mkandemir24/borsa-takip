@@ -5,7 +5,7 @@ from firebase_admin import credentials, firestore
 
 # --- AYARLAR ---
 # Pushcut uygulamasından aldığın Webhook URL'sini buraya yapıştır
-PUSHCUT_URL = "https://api.pushcut.io/v1/notifications/HisseRaporu" 
+PUSHCUT_URL = "https://api.pushcut.io/sm78-WPw1gBiPwMsry-Xg/notifications/MyNotification" 
 
 # --- FIREBASE BAĞLANTISI ---
 if not firebase_admin._apps:
